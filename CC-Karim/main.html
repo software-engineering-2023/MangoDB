@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+
+<html data-wf-domain="karims-spectacular-site-b86ae1.webflow.io" data-wf-page="64721373cb63b9f6b8af5920"
+    data-wf-site="64721373cb63b9f6b8af58ef" data-wf-status="1">
+
+<head>
+    <meta charset="utf-8" />
+    <title>CC</title>
+    <meta content="https://uploads-ssl.webflow.com/62fa5980cd922182416f3647/6310bc7084e35b3d5257017c_opengraph.webp"
+        property="og:image" />
+    <meta content="https://uploads-ssl.webflow.com/62fa5980cd922182416f3647/6310bc7084e35b3d5257017c_opengraph.webp"
+        property="twitter:image" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <meta content="Webflow" name="generator" />
+    <link
+        href="/CC-Karim/main.css"
+        rel="stylesheet" type="text/css" />
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin="anonymous" />
+    <script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js" type="text/javascript"></script>
+    <script
+        type="text/javascript">WebFont.load({ google: { families: ["Roboto:100,100italic,300,300italic,regular,italic,500,500italic,700,700italic,900,900italic", "Outfit:100,200,300,regular,500,600,700,800,900"] } });</script>
+    <script
+        type="text/javascript">!function (o, c) { var n = c.documentElement, t = " w-mod-"; n.className += t + "js", ("ontouchstart" in o || o.DocumentTouch && c instanceof DocumentTouch) && (n.className += t + "touch") }(window, document);</script>
+    <link href="#"
+        rel="shortcut icon" type="image/x-icon" />
+    <link href="https://uploads-ssl.webflow.com/64721373cb63b9f6b8af58ef/64721373cb63b9f6b8af5957_Webclip.webp"
+        rel="apple-touch-icon" /><!-- Please keep this css code to improve the font quality-->
+    <style>
+        .w-webflow-badge {
+            display: none !important;
+        }
+
+        * {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ff8049;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #fff;
+        }
+
+
+        input::-webkit-input-placeholder {
+            transition: .2s;
+        }
+
+        input:-moz-placeholder {
+            transition: .2s;
+        }
+
+        input::-moz-placeholder {
+            transition: .2s;
+        }
+
+        input:-ms-input-placeholder {
+            transition: .2s;
+        }
+
+        input:focus:-ms-input-placeholder {
+            opacity: 0;
+        }
+
+        input:focus::-moz-placeholder {
+            opacity: 0;
+        }
+
+        input:focus:-moz-placeholder {
+            opacity: 0;
+        }
+
+        input:focus::-webkit-input-placeholder {
+            opacity: 0;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/remodal/1.1.1/remodal.min.css" rel="stylesheet"
+        type="text/css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/remodal/1.1.1/remodal-default-theme.min.css" rel="stylesheet"
+        type="text/css" />
+</head>
+
+<body>
+    <div class="page-wrap bg-test">
+        <div class="global-styles w-embed">
+            <style>
+                /* Snippet gets rid of top margin on first element in any rich text*/
+                .w-richtext>:first-child {
+                    margin-top: 0;
+                }
+
+                /* Snippet gets rid of bottom margin on last element in any rich text*/
+                .w-richtext>:last-child,
+                .w-richtext ol li:last-child,
+                .w-richtext ul li:last-child {
+                    margin-bottom: 0;
+                }
+
+                /* Snippet prevents all click and hover interaction with an element */
+                .clickable-off {
+                    pointer-events: none;
+                }
+
+                /* Snippet enables all click and hover interaction with an element */
+                .clickable-on {
+                    pointer-events: auto;
+                }
+
+                /* Snippet enables you to add class of div-square which creates and maintains a 1:1 dimension of a div.*/
+                .div-square::after {
+                    content: "";
+                    display: block;
+                    padding-bottom: 100%;
+                }
+
+                /*Hide focus outline for main content element*/
+                main:focus-visible {
+                    outline: -webkit-focus-ring-color auto 0px;
+                }
+
+                /* Make sure containers never lose their center alignment*/
+                .container-medium,
+                .container-small,
+                .container-large {
+                    margin-right: auto !important;
+                    margin-left: auto !important;
+                }
+
+                /*Reset buttons, and links styles*/
+                a {
+                    color: inherit;
+                    text-decoration: inherit;
+                    font-size: inherit;
+                }
+
+                /*Apply "..." after 3 lines of text */
+                .text-style-3lines {
+                    display: -webkit-box;
+                    overflow: hidden;
+                    -webkit-line-clamp: 3;
+                    -webkit-box-orient: vertical;
+                }
+
+                /*Apply "..." after 2 lines of text */
+                .text-style-2lines {
+                    display: -webkit-box;
+                    overflow: hidden;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                }
+
+
+                /* MY CSS */
+                .nav-link::after {
+                    content: '';
+                    position: absolute;
+                    bottom: 0px;
+                    left: 0px;
+                    height: 2px;
+                    width: 0%;
+                    background: #304761;
+                    transition: all 300ms ease;
+                }
+
+                .nav-link::before {
+                    content: '';
+                    position: absolute;
+                    bottom: 0px;
+                    right: 0px;
+                    height: 2px;
+                    width: 0%;
+                    background: #304761;
+                    transition: all 300ms ease;
+                }
+
+                .nav-link.text-color-white::before,
+                .nav-link.text-color-white::after {
+                    content: '';
+                    background: #fff;
+                }
+
+                .nav-link:hover::after,
+                .nav-link:hover::before {
+                    width: 50%
+                }
+
+                /** Animate bg **/
+                @-webkit-keyframes BGhero2 {
+                    from {
+                        background-position: 50% 0%;
+                    }
+
+                    to {
+                        background-position: 50% -1400%;
+                    }
+                }
+
+                @-webkit-keyframes BGhero {
+                    0% {
+                        opacity: 0;
+                    }
+
+                    33% {
+                        opacity: 1;
+                    }
+
+                    66% {
+                        opacity: 1;
+                    }
+
+                    100% {
+                        opacity: 0;
+                    }
+                }
+
+                .hero__bg {
+                    -webkit-animation: BGhero 10s linear infinite;
+                    -moz-animation: BGhero 10s linear infinite;
+                    animation: BGhero 10s linear infinite;
+                }
+
+                .hero__join:hover .overflow__anim {
+                    bottom: 2rem;
+                }
+
+                .hero__join:hover .arrow-wrap {
+                    -webkit-transform: scale(1.15);
+                    -ms-transform: scale(1.15);
+                    transform: scale(1.15);
+                }
+
+                .btn-arrow:hover .overflow__anim {
+                    left: 2rem;
+                }
+
+                /** swiper **/
+                .swiper-pagination-horizontal.swiper-pagination-bullets .swiper-pagination-bullet {
+                    position: relative;
+                    width: 33.333333333333336%;
+                    -webkit-box-flex: 0;
+                    -webkit-flex: 0 0 auto;
+                    -ms-flex: 0 0 auto;
+                    flex: 0 0 auto;
+                    border-radius: 4px;
+                    background-color: #fff;
+                    max-height: 2px;
+                    margin: 0px;
+                    -webkit-transition: all 100ms ease;
+                    transition: all 100ms ease;
+                    opacity: 0;
+                }
+
+                .swiper-pagination-horizontal.swiper-pagination-bullets .swiper-pagination-bullet.swiper-pagination-bullet-active {
+                    opacity: 1;
+                }
+
+                .swiper-pagination-bullets.swiper-pagination-horizontal {
+                    left: -140px;
+                    width: 287px;
+                }
+
+
+                @-webkit-keyframes runline {
+                    from {
+                        background-position: 0% 50%;
+                    }
+
+                    to {
+                        background-position: 8000% 0%;
+                    }
+                }
+
+                .section.mod--runline {
+                    -webkit-animation: runline 1200s linear infinite;
+                    -moz-animation: runline 1200s linear infinite;
+                    animation: runline 1200s linear infinite;
+                }
+
+                [data-anim='hover-zoom']:hover [data-anim='hover-zoom-img'] {
+                    -webkit-transform: translate(0rem, -3.1rem) scale(1);
+                    -ms-transform: translate(0rem, -3.1rem) scale(1);
+                    transform: translate(0rem, -3.1rem) scale(1);
+                }
+
+                /** Services **/
+                .services__list-item:nth-child(1):hover .services__hover-pen-line {
+                    width: 1rem;
+                }
+
+                .services__list-item:nth-child(1):hover .services__hover-pen {
+                    -webkit-transform: translate(4px, -6px) rotate(-45deg);
+                    -ms-transform: translate(4px, -6px) rotate(-45deg);
+                    transform: translate(4px, -6px) rotate(-45deg);
+                }
+
+                .services__list-item:nth-child(2):hover .services__hover-finance {
+                    -webkit-transform: scale(0.8) translate(0px, -8px);
+                    -ms-transform: scale(0.8) translate(0px, -8px);
+                    transform: scale(0.8) translate(0px, -8px);
+                }
+
+                .services__list-item:nth-child(3):hover .services__icon div:nth-child(1) {
+                    height: 80%;
+                }
+
+                .services__list-item:nth-child(3):hover .services__icon div:nth-child(2) {
+                    height: 60%;
+                }
+
+                .services__list-item:nth-child(3):hover .services__icon div:nth-child(3) {
+                    height: 30%;
+                }
+
+                .services__btn:hover .overflow__anim,
+                .about__card:hover .overflow__anim {
+                    left: 2rem;
+                    bottom: 2rem;
+                }
+
+                .appstore__link:hover img {
+                    -webkit-filter: brightness(0%) invert(200%);
+                    filter: brightness(0%) invert(200%);
+                }
+
+                .reviews__btn-star-wrap:hover img {
+                    -webkit-filter: brightness(100%) invert(0%);
+                    filter: brightness(100%) invert(0%);
+                }
+
+                .about__card:hover .about__img.mod--hover {
+                    -webkit-transform: translate(0px, 20px) scale(0.9);
+                    -ms-transform: translate(0px, 20px) scale(0.9);
+                    transform: translate(0px, 20px) scale(0.9);
+                }
+
+                .about__card:hover .about__balance-circle {
+                    -webkit-transform: rotate(70deg);
+                    -ms-transform: rotate(70deg);
+                    transform: rotate(70deg);
+                }
+
+
+                /*Fluid responsive */
+                html {
+                    font-size: 1rem;
+                }
+
+                @media screen and (max-width:2560px) {
+                    html {
+                        font-size: calc(0.5000000000000003rem + 0.6249999999999998vw);
+                    }
+                }
+
+                @media screen and (max-width:1920px) {
+                    html {
+                        font-size: 1rem;
+                    }
+                }
+
+                @media screen and (min-width: 1280px) and (max-height: 640px) {
+                    html {
+                        font-size: 1.8vh;
+                    }
+                }
+
+                @media screen and (max-width: 1280px) {
+                    html {
+                        font-size: 1.15vw;
+                    }
+                }
+            </style>
+        </div>
+        <header
+            style="-webkit-transform:translate3d(0, -4.375rem, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);-moz-transform:translate3d(0, -4.375rem, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);-ms-transform:translate3d(0, -4.375rem, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);transform:translate3d(0, -4.375rem, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);opacity:0"
+            class="section mod--header">
+            <div class="content"></div>
+        </header>
+        <main class="main">
+            <section id="home" data-w-id="af609c91-8cc0-50e8-447d-1b93b74024a9" class="section mod--hero">
+                <div style="opacity:0" class="hero__content-wrap">
+                    <div class="content">
+                        <div class="hero__content">
+                            <div class="overflow-hidden">
+                                <h1 style="-webkit-transform:translate3d(0, 100%, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);-moz-transform:translate3d(0, 100%, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);-ms-transform:translate3d(0, 100%, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);transform:translate3d(0, 100%, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0)"
+                                    class="heading mod--hero">Your</h1>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h2 class="heading mod--hero heading-large"> Credit</h2>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h2 class="heading mod--hero heading-large">Cards</h2>
+                            </div>
+                        </div>
+                        <section class="section-2 wf-section"><a href="/ccapplication"
+                                class="brix---btn-secondary w-button">Apply For Credit Card</a></section>
+                        <div style="-webkit-transform:translate3d(0, 9.375rem, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);-moz-transform:translate3d(0, 9.375rem, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);-ms-transform:translate3d(0, 9.375rem, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);transform:translate3d(0, 9.375rem, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0)"
+                            class="cards__parallax">
+                            <div class="cards__card-wrap mod--1">
+                                <div class="cards__card-content mod--1">
+                                    <div style="-webkit-transform:translate3d(0, 0, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(8deg) skew(0, 0);-moz-transform:translate3d(0, 0, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(8deg) skew(0, 0);-ms-transform:translate3d(0, 0, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(8deg) skew(0, 0);transform:translate3d(0, 0, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(8deg) skew(0, 0)"
+                                        class="cards__card mod--1">
+                                        <div class="card__shine-wrap">
+                                            <div class="card__shine"></div>
+                                        </div>
+                                    </div><img
+                                        src="https://uploads-ssl.webflow.com/64721373cb63b9f6b8af58ef/64721373cb63b9f6b8af5941_credit-card-shadow2.svg"
+                                        loading="eager" alt="card" class="cards__shadow" />
+                                </div>
+                            </div>
+                            <div class="cards__card-wrap mod--2">
+                                <div class="cards__card-content mod--2">
+                                    <div style="-webkit-transform:translate3d(0, 0, 0) scale3d(1, 1, 1) rotateX(0) rotateY(null) rotateZ(-12deg) skew(0, 0);-moz-transform:translate3d(0, 0, 0) scale3d(1, 1, 1) rotateX(0) rotateY(null) rotateZ(-12deg) skew(0, 0);-ms-transform:translate3d(0, 0, 0) scale3d(1, 1, 1) rotateX(0) rotateY(null) rotateZ(-12deg) skew(0, 0);transform:translate3d(0, 0, 0) scale3d(1, 1, 1) rotateX(0) rotateY(null) rotateZ(-12deg) skew(0, 0);transform-style:preserve-3d"
+                                        class="cards__card mod--2">
+                                        <div class="card__shine-wrap">
+                                            <div class="card__shine mod--2"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="brix---section-2 wf-section">
+                            <div class="brix---container-default-2 w-container">
+                                <div data-w-id="0e6746db-506f-7c94-0a02-12da4d3ea904"
+                                    style="-webkit-transform:translate3d(0, 10%, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);-moz-transform:translate3d(0, 10%, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);-ms-transform:translate3d(0, 10%, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);transform:translate3d(0, 10%, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);opacity:0"
+                                    class="w-layout-grid brix---3-columns-1-col-tablet-2"><a href="/ccapplication"
+                                        class="brix---card-link-content-center-2 w-inline-block"><img
+                                            src="https://uploads-ssl.webflow.com/64721373cb63b9f6b8af58ef/647221da57c3aae423797a57_mobile-app-circle-illustrations-brix-templates.svg"
+                                            alt="Mobile App - Elements Webflow Library - BRIX Templates"
+                                            class="brix---mg-bottom-24px-2" />
+                                        <div class="brix---btn-secondary">View Credit Points</div>
+                                    </a><a href="/ccapplication"
+                                        class="brix---card-link-content-center-2 w-inline-block"><img
+                                            src="https://uploads-ssl.webflow.com/64721373cb63b9f6b8af58ef/647221da57c3aae423797a56_desktop-circle-illustrations-brix-templates.svg"
+                                            alt="Desktop - Elements Webflow Library - BRIX Templates"
+                                            class="brix---mg-bottom-24px-2" />
+                                        <div class="brix---btn-secondary">View Transactions</div>
+                                    </a><a href="/ccapplication"
+                                        class="brix---card-link-content-center-2 w-inline-block"><img
+                                            src="https://uploads-ssl.webflow.com/64721373cb63b9f6b8af58ef/647221da57c3aae423797a55_multiple-users-circle-illustrations-brix-templates.svg"
+                                            alt="Multiple Users - Elements Webflow Library - BRIX Templates"
+                                            class="brix---mg-bottom-24px-2" />
+                                        <div class="brix---btn-secondary">Pay Credit Bill</div>
+                                    </a></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hero__bg"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="https://d3e54v103j8qbb.cloudfront.net/js/jquery-3.5.1.min.dc5e7f18c8.js?site=64721373cb63b9f6b8af58ef"
+        type="text/javascript" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0="
+        crossorigin="anonymous"></script>
+    <script src="/CC-Karim/main.js"
+        type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/smoothscroll/1.4.10/SmoothScroll.min.js"
+        type="text/javascript"></script>
+
+    <script>
+        SmoothScroll({
+            animationTime: 800, // [ms]
+            stepSize: 100, // [px]
+            accelerationDelta: 50,  // 50
+            accelerationMax: 3,   // 3
+            touchpadSupport: false,
+        })
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.js"></script>
+    <script type="text/javascript"> window.REMODAL_GLOBALS = { DEFAULTS: { hashTracking: false } }; </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/remodal/1.1.1/remodal.min.js" type="text/javascript"></script>
+
+    <style>
+        /* Style modal */
+        .remodal-overlay {
+            background: rgba(11, 12, 27, 0.9);
+        }
+
+        .remodal {
+            transform: scale(1) !important;
+        }
+
+        .remodal-wrapper {
+            padding: 0px;
+            overflow: hidden;
+            -webkit-transform: translate(0, 0);
+            -ms-transform: translate(0, 0);
+            transform: translate(0, 0);
+        }
+
+        body {
+            padding-right: 0px !important;
+        }
+    </style>
+
+    <script>
+        $(function () {
+
+            var swiper1 = new Swiper("[data-swiper=profess1]", {
+                speed: 0,
+                slidesPerView: 1,
+                spaceBetween: 0,
+                pagination: {
+                    el: '[data-swiper=pagin-profess]',
+                    type: 'bullets',
+                },
+                effect: "creative",
+                creativeEffect: {
+                    prev: {
+                        opacity: 0,
+                    },
+                    next: {
+                        opacity: 0,
+                    },
+                },
+            });
+
+            var swiper2 = new Swiper("[data-swiper=profess2]", {
+                speed: 800,
+                slidesPerView: 1,
+                spaceBetween: 0,
+                effect: "creative",
+                creativeEffect: {
+                    prev: {
+                        opacity: 0,
+                        translate: [0, "0%", 0],
+                    },
+                    next: {
+                        opacity: 0,
+                        translate: [0, "100%", 0],
+                    },
+                },
+            });
+
+            $(window).scroll(function () {
+                let offset = $(".section.mod--profess")[0].getBoundingClientRect();
+                if (offset.top < 0 && offset.bottom - window.innerHeight > 0) {
+                    let perc = Math.round(100 * Math.abs(offset.top) / (offset.height - $(window).height()));
+                    console.log(perc);
+                    if (perc > 5 && perc < 30) {
+                        swiper1.slideTo(0, 300);
+                        swiper2.slideTo(0, 800);
+                    } else if (perc > 30 && perc < 50) {
+                        swiper1.slideTo(1, 300);
+                        swiper2.slideTo(1, 800);
+                    } else if (perc > 65) {
+                        swiper1.slideTo(2, 300);
+                        swiper2.slideTo(2, 800);
+                    }
+                }
+            });
+
+            swiper1.on('transitionEnd', function () {
+                let slides = $(swiper1.el).find('.swiper-slide');
+                $(slides).not(`:eq(${swiper1.activeIndex})`).find('[data-anim=elem]').removeClass('active');
+                $(slides[swiper1.activeIndex]).find('[data-anim=elem]').addClass('active');
+            });
+
+
+
+            function featuredAnimate(current) {
+                $('[data-anim=featured-overflow]').each(function () {
+                    let arr = $(this).children('div');
+                    for (var i = 0; i < arr.length; i++) {
+                        $(arr[i]).removeClass('active done');
+                        if (i < current) {
+                            $(arr[i]).addClass('done');
+                        }
+                        if (i == current) {
+                            $(arr[i]).addClass('active');
+                        }
+                    }
+                });
+            }
+
+            $('.featured__anim').removeClass('done');
+            $('.col.mod--featured-choose').on('click', function () {
+                let index = $(this).index('.col.mod--featured-choose');
+                $('.col.mod--featured-choose').removeClass('active');
+                $(this).addClass('active');
+                if (index == 1) {
+                    featuredAnimate(index);
+                    $('.featured__line').css('left', '20%');
+                } else if (index == 2) {
+                    featuredAnimate(index);
+                    $('.featured__line').css('left', '40%');
+                } else if (index == 3) {
+                    featuredAnimate(index);
+                    $('.featured__line').css('left', '60%');
+                } else if (index == 4) {
+                    featuredAnimate(index);
+                    $('.featured__line').css('left', '80%');
+                } else {
+                    featuredAnimate(index);
+                    $('.featured__line').css('left', '0%');
+                }
+            });
+
+
+
+
+
+            function counter(elem, value) {
+                let $this = elem.text().replace(/\s/g, '');
+                $(elem).prop('Counter', $this).animate({ Counter: value }, {
+                    duration: 800,
+                    easing: 'swing',
+                    step: function (now) {
+                        let result = Math.ceil(now).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+                        console.log(result)
+                        $(this).text(result);
+                    }
+                });
+            }
+
+            // animate counter
+            $('[data-anim-counter]').hover(function () {
+                $(this).find('[data-anim-counter-second]').each(function (index, el) {
+                    let second = $(this).attr('data-anim-counter-second');
+                    let elem = $(this).children('span');
+                    $(elem).stop();
+                    counter(elem, second);
+                });
+
+            }, function () {
+                $(this).find('[data-anim-counter-first]').each(function (index, el) {
+                    let first = $(this).attr('data-anim-counter-first');
+                    let elem = $(this).children('span');
+                    $(elem).stop();
+                    counter(elem, first);
+                });
+            });
+
+        });  
+    </script>
+
+
+
+    <!-- Sendpulse and global script for form -->
+    <style>
+        form {
+            display: block !important
+        }
+
+        .w-form-done {
+            display: none !important
+        }
+
+        .sp-form-outer {
+            display: none;
+        }
+    </style>
+    <script async src="//web.webformscr.com/apps/fc3/build/loader.js"
+        sp-form-id="cac2ef63a1f70fdc99ea3d07fb7c7e53e21a41060b1f9937ab427588f3368d6d"></script>
+    <script async src="https://amosk.com.ua/js/projects/halolab/forms.js"></script>
+</body>
+
+</html>
