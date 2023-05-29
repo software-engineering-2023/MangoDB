@@ -152,36 +152,55 @@
                     </div>
                     <div class="form-block-wrapper">
                         <div class="f-account-form-block w-form">
-                            <form id="wf-form-Register-Form-2" name="wf-form-Register-Form-2" data-name="Register Form"
-                                method="get">
+                            <form id="wf-form-Register-Form-2" name="wf-form-Register-Form-2" data-name="Register Form" method="get">
                                 <div class="w-layout-grid f-account-input-grid-large">
-                                    <div id="w-node-_4ac5d290-441c-95c0-ae21-530e91676848-904777d5"
-                                        class="f-field-wrapper">
-                                        <div class="f-field-label-2">Email</div><input type="email"
-                                            class="f-field-input w-input" maxlength="256" name="Email-Field-06"
-                                            data-name="Email Field 06" placeholder="user@secureservices.com"
-                                            id="Email-Field-06" />
+                                    <div id="w-node-_4ac5d290-441c-95c0-ae21-530e91676848-904777d5" class="f-field-wrapper">
+                                        <div class="f-field-label-2">Email</div>
+                                        <input type="email" class="f-field-input w-input" maxlength="256" name="Email-Field-06"
+                                            data-name="Email Field 06" placeholder="user@secureservices.com" id="Email-Field-06" />
                                     </div>
-                                    <div id="w-node-_4ac5d290-441c-95c0-ae21-530e9167684c-904777d5"
-                                        class="f-field-wrapper">
-                                        <div class="f-field-label-2">Password</div><input type="password"
-                                            class="f-field-input w-input" maxlength="256" name="Password-Field-06"
-                                            data-name="Password Field 06" placeholder="Password"
-                                            id="Password-Field-06" />
+                                    <div id="w-node-_4ac5d290-441c-95c0-ae21-530e9167684c-904777d5" class="f-field-wrapper">
+                                        <div class="f-field-label-2">Password</div>
+                                        <input type="password" class="f-field-input w-input" maxlength="256" name="Password-Field-06"
+                                            data-name="Password Field 06" placeholder="Password" id="Password-Field-06" />
                                     </div>
                                 </div>
-                                <div class="f-account-form-button"><a href="/CC-Karim/main.html" class="button-3 w-button">Login</a></div>
+                        
+                                <div class="f-account-form-button">
+                                    <button type="button" class="button-3 w-button" onclick="checkEmail()">Login</button>
+                                </div>
+                                <p class="f-paragraph-small-4">Dont have an account yet? <a href="/login_loan-Daniel/singup.html"
+                                    class="f-account-link-2">Signup</a></p>
                             </form>
-                            <div class="f-success-message w-form-done">
-                                <div>Thank you! Your submission has been received!</div>
-                            </div>
-                            <div class="w-form-fail">
-                                <div>Oops! Something went wrong while submitting the form.</div>
-                            </div>
+                        </div>
+                        
+                        <script>
+                            function checkEmail() {
+                                // Get the value of the email input field
+                                var email = document.getElementById("Email-Field-06").value;
+                        
+                                // Check the email value and redirect accordingly
+                                if (email === "user") {
+                                    window.location.href = "/notis-Dina/home.html";
+                                } else if (email === "banker") {
+                                    window.location.href = "/notis-Dina/banker.html";
+                                } else if (email === "admin") {
+                                    window.location.href = "/notis-Dina/admin.html";
+                                }
+                            }
+                            
+                        </script>
+                        <div class="f-success-message w-form-done">
+                            <div>Thank you! Your submission has been received!</div>
+                        </div>
+                        <div class="w-form-fail">
+                            <div>Oops! Something went wrong while submitting the form.</div>
                         </div>
                     </div>
-                    <p class="f-paragraph-small-4">Don&#x27;t have an account yet? <a href="/"
-                            class="f-account-link-2">Signup</a></p>
+                </div>
+
+                            </form>
+                            
                 </div>
             </div>
         </div>
