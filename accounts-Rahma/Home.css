@@ -3504,6 +3504,10 @@ html {
     -webkit-text-fill-color: inherit;
     background-color: rgba(0, 0, 0, 0);
     background-clip: border-box;
+    margin-bottom: -143px;
+    margin-left: 120px;
+    padding-top: 116px;
+    padding-right: 63px;
     overflow: hidden;
   }
   
