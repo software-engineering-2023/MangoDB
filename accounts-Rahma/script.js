@@ -1230,6 +1230,136 @@
       }
     });
   
+    // shared/render/plugins/BaseSiteModules/webflow-edit.js
+    var require_webflow_edit = __commonJS({
+      "shared/render/plugins/BaseSiteModules/webflow-edit.js"(exports, module) {
+        var Webflow = require_webflow_lib();
+        Webflow.define("edit", module.exports = function($, _, options) {
+          options = options || {};
+          if (Webflow.env("test") || Webflow.env("frame")) {
+            if (!options.fixture && !inCypress()) {
+              return {
+                exit: 1
+              };
+            }
+          }
+          var api = {};
+          var $win = $(window);
+          var $html = $(document.documentElement);
+          var location = document.location;
+          var hashchange = "hashchange";
+          var loaded;
+          var loadEditor = options.load || load;
+          var hasLocalStorage = false;
+          try {
+            hasLocalStorage = localStorage && localStorage.getItem && localStorage.getItem("WebflowEditor");
+          } catch (e) {
+          }
+          if (hasLocalStorage) {
+            loadEditor();
+          } else if (location.search) {
+            if (/[?&](edit)(?:[=&?]|$)/.test(location.search) || /\?edit$/.test(location.href)) {
+              loadEditor();
+            }
+          } else {
+            $win.on(hashchange, checkHash).triggerHandler(hashchange);
+          }
+          function checkHash() {
+            if (loaded) {
+              return;
+            }
+            if (/\?edit/.test(location.hash)) {
+              loadEditor();
+            }
+          }
+          function load() {
+            loaded = true;
+            window.WebflowEditor = true;
+            $win.off(hashchange, checkHash);
+            checkThirdPartyCookieSupport(function(thirdPartyCookiesSupported) {
+              $.ajax({
+                url: cleanSlashes("https://editor-api.webflow.com/api/editor/view"),
+                data: {
+                  siteId: $html.attr("data-wf-site")
+                },
+                xhrFields: {
+                  withCredentials: true
+                },
+                dataType: "json",
+                crossDomain: true,
+                success: success(thirdPartyCookiesSupported)
+              });
+            });
+          }
+          function success(thirdPartyCookiesSupported) {
+            return function(data) {
+              if (!data) {
+                console.error("Could not load editor data");
+                return;
+              }
+              data.thirdPartyCookiesSupported = thirdPartyCookiesSupported;
+              getScript(prefix(data.bugReporterScriptPath), function() {
+                getScript(prefix(data.scriptPath), function() {
+                  window.WebflowEditor(data);
+                });
+              });
+            };
+          }
+          function getScript(url, done) {
+            $.ajax({
+              type: "GET",
+              url,
+              dataType: "script",
+              cache: true
+            }).then(done, error);
+          }
+          function error(jqXHR, textStatus, errorThrown) {
+            console.error("Could not load editor script: " + textStatus);
+            throw errorThrown;
+          }
+          function prefix(url) {
+            return url.indexOf("//") >= 0 ? url : cleanSlashes("https://editor-api.webflow.com" + url);
+          }
+          function cleanSlashes(url) {
+            return url.replace(/([^:])\/\//g, "$1/");
+          }
+          function checkThirdPartyCookieSupport(callback) {
+            var iframe = window.document.createElement("iframe");
+            iframe.src = "https://webflow.com/site/third-party-cookie-check.html";
+            iframe.style.display = "none";
+            iframe.sandbox = "allow-scripts allow-same-origin";
+            var handleMessage = function(event) {
+              if (event.data === "WF_third_party_cookies_unsupported") {
+                cleanUpCookieCheckerIframe(iframe, handleMessage);
+                callback(false);
+              } else if (event.data === "WF_third_party_cookies_supported") {
+                cleanUpCookieCheckerIframe(iframe, handleMessage);
+                callback(true);
+              }
+            };
+            iframe.onerror = function() {
+              cleanUpCookieCheckerIframe(iframe, handleMessage);
+              callback(false);
+            };
+            window.addEventListener("message", handleMessage, false);
+            window.document.body.appendChild(iframe);
+          }
+          function cleanUpCookieCheckerIframe(iframe, listener) {
+            window.removeEventListener("message", listener, false);
+            iframe.remove();
+          }
+          return api;
+        });
+        function inCypress() {
+          try {
+            return window.top.__Cypress__;
+          } catch (e) {
+            return false;
+          }
+        }
+      }
+    });
+  
     // shared/render/plugins/BaseSiteModules/webflow-focus-visible.js
     var require_webflow_focus_visible = __commonJS({
       "shared/render/plugins/BaseSiteModules/webflow-focus-visible.js"(exports, module) {
@@ -9676,7 +9806,7 @@
           return selector;
         }
         function getValidDocument(pageId) {
-          if (pageId == null || // $FlowIgnore — if documentElement is null crash
+          if (pageId == null || // $FlowIgnore â€” if documentElement is null crash
           pageId === document.documentElement.getAttribute(WF_PAGE)) {
             return document;
           }
@@ -12409,6 +12539,61 @@
       }
     });
   
+    // shared/render/plugins/Form/webflow-forms-hosted.js
+    var require_webflow_forms_hosted = __commonJS({
+      "shared/render/plugins/Form/webflow-forms-hosted.js"(exports) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", {
+          value: true
+        });
+        exports.default = hostedSubmitWebflow;
+        function hostedSubmitWebflow(reset, loc, Webflow, collectEnterpriseTrackingCookies, preventDefault, findFields, alert, findFileUploads, disableBtn, siteId, afterSubmit, $, formUrl) {
+          return function(data) {
+            reset(data);
+            var form = data.form;
+            var payload = {
+              name: form.attr("data-name") || form.attr("name") || "Untitled Form",
+              source: loc.href,
+              test: Webflow.env(),
+              fields: {},
+              fileUploads: {},
+              dolphin: /pass[\s-_]?(word|code)|secret|login|credentials/i.test(form.html()),
+              trackingCookies: collectEnterpriseTrackingCookies()
+            };
+            const wfFlow = form.attr("data-wf-flow");
+            if (wfFlow) {
+              payload.wfFlow = wfFlow;
+            }
+            preventDefault(data);
+            var status = findFields(form, payload.fields);
+            if (status) {
+              return alert(status);
+            }
+            payload.fileUploads = findFileUploads(form);
+            disableBtn(data);
+            if (!siteId) {
+              afterSubmit(data);
+              return;
+            }
+            $.ajax({
+              url: formUrl,
+              type: "POST",
+              data: payload,
+              dataType: "json",
+              crossDomain: true
+            }).done(function(response) {
+              if (response && response.code === 200) {
+                data.success = true;
+              }
+              afterSubmit(data);
+            }).fail(function() {
+              afterSubmit(data);
+            });
+          };
+        }
+      }
+    });
+  
     // shared/render/plugins/Form/webflow-forms.js
     var require_webflow_forms = __commonJS({
       "shared/render/plugins/Form/webflow-forms.js"(exports, module) {
@@ -12492,8 +12677,8 @@
               return;
             }
             if (siteId) {
-              data.handler = true ? exportedSubmitWebflow : (() => {
-                const hostedSubmitHandler = null.default;
+              data.handler = false ? exportedSubmitWebflow : (() => {
+                const hostedSubmitHandler = require_webflow_forms_hosted().default;
                 return hostedSubmitHandler(reset, loc, Webflow, collectEnterpriseTrackingCookies, preventDefault, findFields, alert, findFileUploads, disableBtn, siteId, afterSubmit, $, formUrl);
               })();
               return;
@@ -13484,6 +13669,7 @@
   
     // <stdin>
     require_webflow_brand();
+    require_webflow_edit();
     require_webflow_focus_visible();
     require_webflow_focus();
     require_webflow_ix2_events();
