@@ -1199,8 +1199,7 @@
                     $(brandElement).attr("style", fullScreen ? "display: none !important;" : "");
                 }
                 function createBadge() {
-                 
-                    return null;
+                   return null;
                 }
                 function ensureBrand() {
                     var found = $body.children(namespace);
@@ -13048,6 +13047,459 @@
         }
     });
 
+    // shared/render/plugins/Navbar/webflow-navbar.js
+    var require_webflow_navbar = __commonJS({
+        "shared/render/plugins/Navbar/webflow-navbar.js"(exports, module) {
+            var Webflow = require_webflow_lib();
+            var IXEvents = require_webflow_ix2_events();
+            var KEY_CODES = {
+                ARROW_LEFT: 37,
+                ARROW_UP: 38,
+                ARROW_RIGHT: 39,
+                ARROW_DOWN: 40,
+                ESCAPE: 27,
+                SPACE: 32,
+                ENTER: 13,
+                HOME: 36,
+                END: 35
+            };
+            Webflow.define("navbar", module.exports = function ($, _) {
+                var api = {};
+                var tram = $.tram;
+                var $win = $(window);
+                var $doc = $(document);
+                var debounce = _.debounce;
+                var $body;
+                var $navbars;
+                var designer;
+                var inEditor;
+                var inApp = Webflow.env();
+                var overlay = '<div class="w-nav-overlay" data-wf-ignore />';
+                var namespace = ".w-nav";
+                var navbarOpenedButton = "w--open";
+                var navbarOpenedDropdown = "w--nav-dropdown-open";
+                var navbarOpenedDropdownToggle = "w--nav-dropdown-toggle-open";
+                var navbarOpenedDropdownList = "w--nav-dropdown-list-open";
+                var navbarOpenedLink = "w--nav-link-open";
+                var ix = IXEvents.triggers;
+                var menuSibling = $();
+                api.ready = api.design = api.preview = init;
+                api.destroy = function () {
+                    menuSibling = $();
+                    removeListeners();
+                    if ($navbars && $navbars.length) {
+                        $navbars.each(teardown);
+                    }
+                };
+                function init() {
+                    designer = inApp && Webflow.env("design");
+                    inEditor = Webflow.env("editor");
+                    $body = $(document.body);
+                    $navbars = $doc.find(namespace);
+                    if (!$navbars.length) {
+                        return;
+                    }
+                    $navbars.each(build);
+                    removeListeners();
+                    addListeners();
+                }
+                function removeListeners() {
+                    Webflow.resize.off(resizeAll);
+                }
+                function addListeners() {
+                    Webflow.resize.on(resizeAll);
+                }
+                function resizeAll() {
+                    $navbars.each(resize);
+                }
+                function build(i, el) {
+                    var $el = $(el);
+                    var data = $.data(el, namespace);
+                    if (!data) {
+                        data = $.data(el, namespace, {
+                            open: false,
+                            el: $el,
+                            config: {},
+                            selectedIdx: -1
+                        });
+                    }
+                    data.menu = $el.find(".w-nav-menu");
+                    data.links = data.menu.find(".w-nav-link");
+                    data.dropdowns = data.menu.find(".w-dropdown");
+                    data.dropdownToggle = data.menu.find(".w-dropdown-toggle");
+                    data.dropdownList = data.menu.find(".w-dropdown-list");
+                    data.button = $el.find(".w-nav-button");
+                    data.container = $el.find(".w-container");
+                    data.overlayContainerId = "w-nav-overlay-" + i;
+                    data.outside = outside(data);
+                    var navBrandLink = $el.find(".w-nav-brand");
+                    if (navBrandLink && navBrandLink.attr("href") === "/" && navBrandLink.attr("aria-label") == null) {
+                        navBrandLink.attr("aria-label", "home");
+                    }
+                    data.button.attr("style", "-webkit-user-select: text;");
+                    if (data.button.attr("aria-label") == null) {
+                        data.button.attr("aria-label", "menu");
+                    }
+                    data.button.attr("role", "button");
+                    data.button.attr("tabindex", "0");
+                    data.button.attr("aria-controls", data.overlayContainerId);
+                    data.button.attr("aria-haspopup", "menu");
+                    data.button.attr("aria-expanded", "false");
+                    data.el.off(namespace);
+                    data.button.off(namespace);
+                    data.menu.off(namespace);
+                    configure(data);
+                    if (designer) {
+                        removeOverlay(data);
+                        data.el.on("setting" + namespace, handler(data));
+                    } else {
+                        addOverlay(data);
+                        data.button.on("click" + namespace, toggle(data));
+                        data.menu.on("click" + namespace, "a", navigate(data));
+                        data.button.on("keydown" + namespace, makeToggleButtonKeyboardHandler(data));
+                        data.el.on("keydown" + namespace, makeLinksKeyboardHandler(data));
+                    }
+                    resize(i, el);
+                }
+                function teardown(i, el) {
+                    var data = $.data(el, namespace);
+                    if (data) {
+                        removeOverlay(data);
+                        $.removeData(el, namespace);
+                    }
+                }
+                function removeOverlay(data) {
+                    if (!data.overlay) {
+                        return;
+                    }
+                    close(data, true);
+                    data.overlay.remove();
+                    data.overlay = null;
+                }
+                function addOverlay(data) {
+                    if (data.overlay) {
+                        return;
+                    }
+                    data.overlay = $(overlay).appendTo(data.el);
+                    data.overlay.attr("id", data.overlayContainerId);
+                    data.parent = data.menu.parent();
+                    close(data, true);
+                }
+                function configure(data) {
+                    var config = {};
+                    var old = data.config || {};
+                    var animation = config.animation = data.el.attr("data-animation") || "default";
+                    config.animOver = /^over/.test(animation);
+                    config.animDirect = /left$/.test(animation) ? -1 : 1;
+                    if (old.animation !== animation) {
+                        data.open && _.defer(reopen, data);
+                    }
+                    config.easing = data.el.attr("data-easing") || "ease";
+                    config.easing2 = data.el.attr("data-easing2") || "ease";
+                    var duration = data.el.attr("data-duration");
+                    config.duration = duration != null ? Number(duration) : 400;
+                    config.docHeight = data.el.attr("data-doc-height");
+                    data.config = config;
+                }
+                function handler(data) {
+                    return function (evt, options) {
+                        options = options || {};
+                        var winWidth = $win.width();
+                        configure(data);
+                        options.open === true && open(data, true);
+                        options.open === false && close(data, true);
+                        data.open && _.defer(function () {
+                            if (winWidth !== $win.width()) {
+                                reopen(data);
+                            }
+                        });
+                    };
+                }
+                function makeToggleButtonKeyboardHandler(data) {
+                    return function (evt) {
+                        switch (evt.keyCode) {
+                            case KEY_CODES.SPACE:
+                            case KEY_CODES.ENTER: {
+                                toggle(data)();
+                                evt.preventDefault();
+                                return evt.stopPropagation();
+                            }
+                            case KEY_CODES.ESCAPE: {
+                                close(data);
+                                evt.preventDefault();
+                                return evt.stopPropagation();
+                            }
+                            case KEY_CODES.ARROW_RIGHT:
+                            case KEY_CODES.ARROW_DOWN:
+                            case KEY_CODES.HOME:
+                            case KEY_CODES.END: {
+                                if (!data.open) {
+                                    evt.preventDefault();
+                                    return evt.stopPropagation();
+                                }
+                                if (evt.keyCode === KEY_CODES.END) {
+                                    data.selectedIdx = data.links.length - 1;
+                                } else {
+                                    data.selectedIdx = 0;
+                                }
+                                focusSelectedLink(data);
+                                evt.preventDefault();
+                                return evt.stopPropagation();
+                            }
+                        }
+                    };
+                }
+                function makeLinksKeyboardHandler(data) {
+                    return function (evt) {
+                        if (!data.open) {
+                            return;
+                        }
+                        data.selectedIdx = data.links.index(document.activeElement);
+                        switch (evt.keyCode) {
+                            case KEY_CODES.HOME:
+                            case KEY_CODES.END: {
+                                if (evt.keyCode === KEY_CODES.END) {
+                                    data.selectedIdx = data.links.length - 1;
+                                } else {
+                                    data.selectedIdx = 0;
+                                }
+                                focusSelectedLink(data);
+                                evt.preventDefault();
+                                return evt.stopPropagation();
+                            }
+                            case KEY_CODES.ESCAPE: {
+                                close(data);
+                                data.button.focus();
+                                evt.preventDefault();
+                                return evt.stopPropagation();
+                            }
+                            case KEY_CODES.ARROW_LEFT:
+                            case KEY_CODES.ARROW_UP: {
+                                data.selectedIdx = Math.max(-1, data.selectedIdx - 1);
+                                focusSelectedLink(data);
+                                evt.preventDefault();
+                                return evt.stopPropagation();
+                            }
+                            case KEY_CODES.ARROW_RIGHT:
+                            case KEY_CODES.ARROW_DOWN: {
+                                data.selectedIdx = Math.min(data.links.length - 1, data.selectedIdx + 1);
+                                focusSelectedLink(data);
+                                evt.preventDefault();
+                                return evt.stopPropagation();
+                            }
+                        }
+                    };
+                }
+                function focusSelectedLink(data) {
+                    if (data.links[data.selectedIdx]) {
+                        var selectedElement = data.links[data.selectedIdx];
+                        selectedElement.focus();
+                        navigate(selectedElement);
+                    }
+                }
+                function reopen(data) {
+                    if (!data.open) {
+                        return;
+                    }
+                    close(data, true);
+                    open(data, true);
+                }
+                function toggle(data) {
+                    return debounce(function () {
+                        data.open ? close(data) : open(data);
+                    });
+                }
+                function navigate(data) {
+                    return function (evt) {
+                        var link = $(this);
+                        var href = link.attr("href");
+                        if (!Webflow.validClick(evt.currentTarget)) {
+                            evt.preventDefault();
+                            return;
+                        }
+                        if (href && href.indexOf("#") === 0 && data.open) {
+                            close(data);
+                        }
+                    };
+                }
+                function outside(data) {
+                    if (data.outside) {
+                        $doc.off("click" + namespace, data.outside);
+                    }
+                    return function (evt) {
+                        var $target = $(evt.target);
+                        if (inEditor && $target.closest(".w-editor-bem-EditorOverlay").length) {
+                            return;
+                        }
+                        outsideDebounced(data, $target);
+                    };
+                }
+                var outsideDebounced = debounce(function (data, $target) {
+                    if (!data.open) {
+                        return;
+                    }
+                    var menu = $target.closest(".w-nav-menu");
+                    if (!data.menu.is(menu)) {
+                        close(data);
+                    }
+                });
+                function resize(i, el) {
+                    var data = $.data(el, namespace);
+                    var collapsed = data.collapsed = data.button.css("display") !== "none";
+                    if (data.open && !collapsed && !designer) {
+                        close(data, true);
+                    }
+                    if (data.container.length) {
+                        var updateEachMax = updateMax(data);
+                        data.links.each(updateEachMax);
+                        data.dropdowns.each(updateEachMax);
+                    }
+                    if (data.open) {
+                        setOverlayHeight(data);
+                    }
+                }
+                var maxWidth = "max-width";
+                function updateMax(data) {
+                    var containMax = data.container.css(maxWidth);
+                    if (containMax === "none") {
+                        containMax = "";
+                    }
+                    return function (i, link) {
+                        link = $(link);
+                        link.css(maxWidth, "");
+                        if (link.css(maxWidth) === "none") {
+                            link.css(maxWidth, containMax);
+                        }
+                    };
+                }
+                function addMenuOpen(i, el) {
+                    el.setAttribute("data-nav-menu-open", "");
+                }
+                function removeMenuOpen(i, el) {
+                    el.removeAttribute("data-nav-menu-open");
+                }
+                function open(data, immediate) {
+                    if (data.open) {
+                        return;
+                    }
+                    data.open = true;
+                    data.menu.each(addMenuOpen);
+                    data.links.addClass(navbarOpenedLink);
+                    data.dropdowns.addClass(navbarOpenedDropdown);
+                    data.dropdownToggle.addClass(navbarOpenedDropdownToggle);
+                    data.dropdownList.addClass(navbarOpenedDropdownList);
+                    data.button.addClass(navbarOpenedButton);
+                    var config = data.config;
+                    var animation = config.animation;
+                    if (animation === "none" || !tram.support.transform || config.duration <= 0) {
+                        immediate = true;
+                    }
+                    var bodyHeight = setOverlayHeight(data);
+                    var menuHeight = data.menu.outerHeight(true);
+                    var menuWidth = data.menu.outerWidth(true);
+                    var navHeight = data.el.height();
+                    var navbarEl = data.el[0];
+                    resize(0, navbarEl);
+                    ix.intro(0, navbarEl);
+                    Webflow.redraw.up();
+                    if (!designer) {
+                        $doc.on("click" + namespace, data.outside);
+                    }
+                    if (immediate) {
+                        complete();
+                        return;
+                    }
+                    var transConfig = "transform " + config.duration + "ms " + config.easing;
+                    if (data.overlay) {
+                        menuSibling = data.menu.prev();
+                        data.overlay.show().append(data.menu);
+                    }
+                    if (config.animOver) {
+                        tram(data.menu).add(transConfig).set({
+                            x: config.animDirect * menuWidth,
+                            height: bodyHeight
+                        }).start({
+                            x: 0
+                        }).then(complete);
+                        data.overlay && data.overlay.width(menuWidth);
+                        return;
+                    }
+                    var offsetY = navHeight + menuHeight;
+                    tram(data.menu).add(transConfig).set({
+                        y: -offsetY
+                    }).start({
+                        y: 0
+                    }).then(complete);
+                    function complete() {
+                        data.button.attr("aria-expanded", "true");
+                    }
+                }
+                function setOverlayHeight(data) {
+                    var config = data.config;
+                    var bodyHeight = config.docHeight ? $doc.height() : $body.height();
+                    if (config.animOver) {
+                        data.menu.height(bodyHeight);
+                    } else if (data.el.css("position") !== "fixed") {
+                        bodyHeight -= data.el.outerHeight(true);
+                    }
+                    data.overlay && data.overlay.height(bodyHeight);
+                    return bodyHeight;
+                }
+                function close(data, immediate) {
+                    if (!data.open) {
+                        return;
+                    }
+                    data.open = false;
+                    data.button.removeClass(navbarOpenedButton);
+                    var config = data.config;
+                    if (config.animation === "none" || !tram.support.transform || config.duration <= 0) {
+                        immediate = true;
+                    }
+                    ix.outro(0, data.el[0]);
+                    $doc.off("click" + namespace, data.outside);
+                    if (immediate) {
+                        tram(data.menu).stop();
+                        complete();
+                        return;
+                    }
+                    var transConfig = "transform " + config.duration + "ms " + config.easing2;
+                    var menuHeight = data.menu.outerHeight(true);
+                    var menuWidth = data.menu.outerWidth(true);
+                    var navHeight = data.el.height();
+                    if (config.animOver) {
+                        tram(data.menu).add(transConfig).start({
+                            x: menuWidth * config.animDirect
+                        }).then(complete);
+                        return;
+                    }
+                    var offsetY = navHeight + menuHeight;
+                    tram(data.menu).add(transConfig).start({
+                        y: -offsetY
+                    }).then(complete);
+                    function complete() {
+                        data.menu.height("");
+                        tram(data.menu).set({
+                            x: 0,
+                            y: 0
+                        });
+                        data.menu.each(removeMenuOpen);
+                        data.links.removeClass(navbarOpenedLink);
+                        data.dropdowns.removeClass(navbarOpenedDropdown);
+                        data.dropdownToggle.removeClass(navbarOpenedDropdownToggle);
+                        data.dropdownList.removeClass(navbarOpenedDropdownList);
+                        if (data.overlay && data.overlay.children().length) {
+                            menuSibling.length ? data.menu.insertAfter(menuSibling) : data.menu.prependTo(data.parent);
+                            data.overlay.attr("style", "").hide();
+                        }
+                        data.el.triggerHandler("w-close");
+                        data.button.attr("aria-expanded", "false");
+                    }
+                }
+                return api;
+            });
+        }
+    });
+
     // <stdin>
     require_webflow_brand();
     require_webflow_edit();
@@ -13059,8 +13511,52 @@
     require_webflow_scroll();
     require_webflow_touch();
     require_webflow_forms();
+    require_webflow_navbar();
 })();
-
+/*!
+ * tram.js v0.8.2-global
+ * Cross-browser CSS3 transitions in JavaScript
+ * https://github.com/bkwld/tram
+ * MIT License
+ */
+/*!
+ * Webflow._ (aka) Underscore.js 1.6.0 (custom build)
+ * _.each
+ * _.map
+ * _.find
+ * _.filter
+ * _.any
+ * _.contains
+ * _.delay
+ * _.defer
+ * _.throttle (webflow)
+ * _.debounce
+ * _.keys
+ * _.has
+ * _.now
+ * _.template (webflow: upgraded to 1.13.6)
+ *
+ * http://underscorejs.org
+ * (c) 2009-2013 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+ * Underscore may be freely distributed under the MIT license.
+ * @license MIT
+ */
+/*! Bundled license information:
+ 
+timm/lib/timm.js:
+  (*!
+   * Timm
+   *
+   * Immutability helpers with fast reads and acceptable writes.
+   *
+   * @copyright Guillermo Grau Panea 2016
+   * @license MIT
+   *)
+*/
+/**
+ * ----------------------------------------------------------------------
+ * Webflow: Interactions 2.0: Init
+ */
 Webflow.require('ix2').init(
-    { "events": { "e": { "id": "e", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OVER", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-19" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".btn", "originalId": "64721373cb63b9f6b8af5920|a4458752-4985-99eb-e29a-a17624f23469", "appliesTo": "CLASS" }, "targets": [{ "selector": ".btn", "originalId": "64721373cb63b9f6b8af5920|a4458752-4985-99eb-e29a-a17624f23469", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1660647650542 }, "e-2": { "id": "e-2", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OUT", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-2", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-18" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".btn", "originalId": "64721373cb63b9f6b8af5920|a4458752-4985-99eb-e29a-a17624f23469", "appliesTo": "CLASS" }, "targets": [{ "selector": ".btn", "originalId": "64721373cb63b9f6b8af5920|a4458752-4985-99eb-e29a-a17624f23469", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1660647650563 }, "e-3": { "id": "e-3", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_MOVE", "action": { "id": "", "actionTypeId": "GENERAL_CONTINUOUS_ACTION", "config": { "actionListId": "a-3", "affectedElements": {}, "duration": 0 } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "id": "64721373cb63b9f6b8af5920|af609c91-8cc0-50e8-447d-1b93b74024a9", "appliesTo": "ELEMENT", "styleBlockIds": [] }, "targets": [{ "id": "64721373cb63b9f6b8af5920|af609c91-8cc0-50e8-447d-1b93b74024a9", "appliesTo": "ELEMENT", "styleBlockIds": [] }], "config": [{ "continuousParameterGroupId": "a-3-p", "selectedAxis": "X_AXIS", "basedOn": "ELEMENT", "reverse": false, "smoothing": 90, "restingState": 50 }, { "continuousParameterGroupId": "a-3-p-2", "selectedAxis": "Y_AXIS", "basedOn": "ELEMENT", "reverse": false, "smoothing": 50, "restingState": 50 }], "createdOn": 1660654592739 }, "e-4": { "id": "e-4", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OVER", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-4", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-5" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".btnbig", "originalId": "64721373cb63b9f6b8af5920|e7296ad0-6e3c-185e-8d68-aa2ab8a0a62f", "appliesTo": "CLASS" }, "targets": [{ "selector": ".btnbig", "originalId": "64721373cb63b9f6b8af5920|e7296ad0-6e3c-185e-8d68-aa2ab8a0a62f", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1661776816153 }, "e-5": { "id": "e-5", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OUT", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-5", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-11" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".btnbig", "originalId": "64721373cb63b9f6b8af5920|e7296ad0-6e3c-185e-8d68-aa2ab8a0a62f", "appliesTo": "CLASS" }, "targets": [{ "selector": ".btnbig", "originalId": "64721373cb63b9f6b8af5920|e7296ad0-6e3c-185e-8d68-aa2ab8a0a62f", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1661776816154 }, "e-6": { "id": "e-6", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OVER", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-7" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".social-link", "originalId": "64721373cb63b9f6b8af5920|6a7024eb-4513-21eb-0386-ea7675742d2c", "appliesTo": "CLASS" }, "targets": [{ "selector": ".social-link", "originalId": "64721373cb63b9f6b8af5920|6a7024eb-4513-21eb-0386-ea7675742d2c", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1662025275323 }, "e-7": { "id": "e-7", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OUT", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-2", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-6" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".social-link", "originalId": "64721373cb63b9f6b8af5920|6a7024eb-4513-21eb-0386-ea7675742d2c", "appliesTo": "CLASS" }, "targets": [{ "selector": ".social-link", "originalId": "64721373cb63b9f6b8af5920|6a7024eb-4513-21eb-0386-ea7675742d2c", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1662025275323 }, "e-8": { "id": "e-8", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OVER", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-9" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".appstore__link", "originalId": "64721373cb63b9f6b8af5920|fd6ec85e-e6ad-e431-4e7d-3aa40af81cff", "appliesTo": "CLASS" }, "targets": [{ "selector": ".appstore__link", "originalId": "64721373cb63b9f6b8af5920|fd6ec85e-e6ad-e431-4e7d-3aa40af81cff", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1662025723594 }, "e-9": { "id": "e-9", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OUT", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-2", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-8" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".appstore__link", "originalId": "64721373cb63b9f6b8af5920|fd6ec85e-e6ad-e431-4e7d-3aa40af81cff", "appliesTo": "CLASS" }, "targets": [{ "selector": ".appstore__link", "originalId": "64721373cb63b9f6b8af5920|fd6ec85e-e6ad-e431-4e7d-3aa40af81cff", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1662025723594 }, "e-13": { "id": "e-13", "name": "", "animationType": "custom", "eventTypeId": "PAGE_FINISH", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-7", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-12" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "id": "64721373cb63b9f6b8af5920", "appliesTo": "PAGE", "styleBlockIds": [] }, "targets": [{ "id": "64721373cb63b9f6b8af5920", "appliesTo": "PAGE", "styleBlockIds": [] }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1662043847696 }, "e-16": { "id": "e-16", "name": "", "animationType": "preset", "eventTypeId": "SCROLL_INTO_VIEW", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-21", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-17" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "id": "64721373cb63b9f6b8af5920|0e6746db-506f-7c94-0a02-12da4d3ea904", "appliesTo": "ELEMENT", "styleBlockIds": [] }, "targets": [{ "id": "64721373cb63b9f6b8af5920|0e6746db-506f-7c94-0a02-12da4d3ea904", "appliesTo": "ELEMENT", "styleBlockIds": [] }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": 0, "scrollOffsetUnit": "%", "delay": null, "direction": null, "effectIn": null }, "createdOn": 1637646551285 }, "e-18": { "id": "e-18", "name": "", "animationType": "custom", "eventTypeId": "DROPDOWN_OPEN", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-47", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-19" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".f-dropdown", "originalId": "63226e0878e70198b1448dd7|78bd4205-904e-c5f9-435b-95105151720d", "appliesTo": "CLASS" }, "targets": [{ "selector": ".f-dropdown", "originalId": "63226e0878e70198b1448dd7|78bd4205-904e-c5f9-435b-95105151720d", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1645840154469 }, "e-19": { "id": "e-19", "name": "", "animationType": "custom", "eventTypeId": "DROPDOWN_CLOSE", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-48", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-18" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".f-dropdown", "originalId": "63226e0878e70198b1448dd7|78bd4205-904e-c5f9-435b-95105151720d", "appliesTo": "CLASS" }, "targets": [{ "selector": ".f-dropdown", "originalId": "63226e0878e70198b1448dd7|78bd4205-904e-c5f9-435b-95105151720d", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1645840154470 }, "e-20": { "id": "e-20", "name": "", "animationType": "preset", "eventTypeId": "SCROLL_INTO_VIEW", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-20", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-21" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "id": "64721373cb63b9f6b8af5924|db788ec6-09ce-ab1f-d0d9-4a9a186f58ce", "appliesTo": "ELEMENT", "styleBlockIds": [] }, "targets": [{ "id": "64721373cb63b9f6b8af5924|db788ec6-09ce-ab1f-d0d9-4a9a186f58ce", "appliesTo": "ELEMENT", "styleBlockIds": [] }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": 0, "scrollOffsetUnit": "%", "delay": null, "direction": null, "effectIn": null }, "createdOn": 1637208396272 }, "e-22": { "id": "e-22", "name": "", "animationType": "custom", "eventTypeId": "SCROLL_INTO_VIEW", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-21", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-23" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "id": "64721373cb63b9f6b8af5924|db788ec6-09ce-ab1f-d0d9-4a9a186f58d9", "appliesTo": "ELEMENT", "styleBlockIds": [] }, "targets": [{ "id": "64721373cb63b9f6b8af5924|db788ec6-09ce-ab1f-d0d9-4a9a186f58d9", "appliesTo": "ELEMENT", "styleBlockIds": [] }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": 0, "scrollOffsetUnit": "%", "delay": null, "direction": null, "effectIn": null }, "createdOn": 1637209854447 } }, "actionLists": { "a": { "id": "a", "title": "btn-hover_over", "actionItemGroups": [{ "actionItems": [{ "id": "a-n-2", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "yValue": 0, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-n-4", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "yValue": 110, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-n-3", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "yValue": 110, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }] }, { "actionItems": [{ "id": "a-n-6", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 500, "target": {}, "yValue": 0, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-n-5", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 150, "easing": "ease", "duration": 500, "target": {}, "yValue": 0, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-n", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 150, "easing": "ease", "duration": 500, "target": {}, "yValue": -2, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }] }], "useFirstGroupAsInitialState": true, "createdOn": 1660647667275 }, "a-2": { "id": "a-2", "title": "btn-hover_out", "actionItemGroups": [{ "actionItems": [{ "id": "a-2-n-6", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 500, "target": {}, "yValue": 110, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-2-n-5", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 500, "target": {}, "yValue": 0, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-2-n-4", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 150, "easing": "ease", "duration": 500, "target": {}, "yValue": 110, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }] }], "useFirstGroupAsInitialState": false, "createdOn": 1660647667275 }, "a-3": { "id": "a-3", "title": "hero-cards", "continuousParameterGroups": [{ "id": "a-3-p", "type": "MOUSE_X", "parameterLabel": "Mouse X", "continuousActionGroups": [{ "keyframe": 0, "actionItems": [{ "id": "a-3-n", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": "CHILDREN", "selector": ".cards__card-content.mod--1", "selectorGuids": ["3ed84636-3f6c-5565-6010-874604085d97", "3ed84636-3f6c-5565-6010-874604085dac"] }, "xValue": -14, "yValue": null, "zValue": null, "xUnit": "deg", "yUnit": "deg", "zUnit": "deg" } }, { "id": "a-3-n-5", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": "CHILDREN", "selector": ".cards__card-content.mod--2", "selectorGuids": ["3ed84636-3f6c-5565-6010-874604085d97", "3ed84636-3f6c-5565-6010-874604085da5"] }, "xValue": 14, "yValue": null, "zValue": null, "xUnit": "deg", "yUnit": "deg", "zUnit": "deg" } }] }, { "keyframe": 49.9, "actionItems": [{ "id": "a-3-n-7", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": "CHILDREN", "selector": ".card__shine-wrap", "selectorGuids": ["05a9ca4e-9654-8e4b-7911-22939065ebc3"] }, "xValue": -100, "xUnit": "%", "yUnit": "PX", "zUnit": "PX" } }] }, { "keyframe": 50, "actionItems": [{ "id": "a-3-n-8", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": "CHILDREN", "selector": ".card__shine-wrap", "selectorGuids": ["05a9ca4e-9654-8e4b-7911-22939065ebc3"] }, "xValue": 100, "xUnit": "%", "yUnit": "PX", "zUnit": "PX" } }] }, { "keyframe": 100, "actionItems": [{ "id": "a-3-n-2", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": "CHILDREN", "selector": ".cards__card-content.mod--1", "selectorGuids": ["3ed84636-3f6c-5565-6010-874604085d97", "3ed84636-3f6c-5565-6010-874604085dac"] }, "xValue": 14, "yValue": null, "xUnit": "deg", "yUnit": "deg", "zUnit": "DEG" } }, { "id": "a-3-n-6", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": "CHILDREN", "selector": ".cards__card-content.mod--2", "selectorGuids": ["3ed84636-3f6c-5565-6010-874604085d97", "3ed84636-3f6c-5565-6010-874604085da5"] }, "xValue": -14, "yValue": null, "zValue": null, "xUnit": "deg", "yUnit": "deg", "zUnit": "deg" } }] }] }, { "id": "a-3-p-2", "type": "MOUSE_Y", "parameterLabel": "Mouse Y", "continuousActionGroups": [] }], "createdOn": 1660654603287 }, "a-4": { "id": "a-4", "title": "btnBig-hover_over", "actionItemGroups": [{ "actionItems": [{ "id": "a-4-n-3", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "value": 0, "unit": "" } }] }, { "actionItems": [{ "id": "a-4-n", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 500, "target": {}, "xValue": 1.5, "yValue": -1.5, "xUnit": "rem", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-4-n-2", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "value": 1, "unit": "" } }] }], "useFirstGroupAsInitialState": true, "createdOn": 1661776821746 }, "a-5": { "id": "a-5", "title": "btnBig-hover_out", "actionItemGroups": [{ "actionItems": [{ "id": "a-5-n", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 500, "target": {}, "xValue": 0, "yValue": 0, "xUnit": "rem", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-5-n-2", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "value": 0, "unit": "" } }] }], "useFirstGroupAsInitialState": false, "createdOn": 1661776821746 }, "a-7": { "id": "a-7", "title": "Section-home", "actionItemGroups": [{ "actionItems": [{ "id": "a-7-n", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "selector": ".section.mod--header", "selectorGuids": ["d00eb5c6-b523-75bd-daa5-47357b3c02e3", "d00eb5c6-b523-75bd-daa5-47357b3c02e8"] }, "yValue": -4.375, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-7-n-25", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "yValue": 9.375, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-7-n-23", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "selector": ".hero__content-wrap", "selectorGuids": ["6b46cf29-e24b-d1fa-8966-78e591629fbd"] }, "value": 0, "unit": "" } }, { "id": "a-7-n-21", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "selector": ".cards__card.mod--2", "selectorGuids": ["3ed84636-3f6c-5565-6010-874604085d8c", "3ed84636-3f6c-5565-6010-874604085da8"] }, "yValue": null, "zValue": -12, "xUnit": "DEG", "yUnit": "deg", "zUnit": "deg" } }, { "id": "a-7-n-19", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "selector": ".cards__card.mod--1", "selectorGuids": ["3ed84636-3f6c-5565-6010-874604085d8c", "3ed84636-3f6c-5565-6010-874604085dab"] }, "zValue": 8, "xUnit": "DEG", "yUnit": "DEG", "zUnit": "deg" } }, { "id": "a-7-n-17", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "selector": ".cards__parallax", "selectorGuids": ["3ed84636-3f6c-5565-6010-874604085d86"] }, "yValue": 9.375, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-7-n-15", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "yValue": 15.625, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-7-n-9", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "selector": ".heading.mod--hero", "selectorGuids": ["1575f616-5bd6-8828-3847-779b006344f8", "8a774eb5-a48d-acaa-00b3-9337742f6734"] }, "yValue": 100, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-7-n-5", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "id": "64721373cb63b9f6b8af5920|8db1b536-f9a7-f56e-ccf9-d1321667ccde" }, "yValue": 5, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-7-n-2", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "selector": ".section.mod--header", "selectorGuids": ["d00eb5c6-b523-75bd-daa5-47357b3c02e3", "d00eb5c6-b523-75bd-daa5-47357b3c02e8"] }, "value": 0, "unit": "" } }, { "id": "a-7-n-12", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "yValue": 5, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }] }, { "actionItems": [{ "id": "a-7-n-3", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 1000, "target": { "selector": ".section.mod--header", "selectorGuids": ["d00eb5c6-b523-75bd-daa5-47357b3c02e3", "d00eb5c6-b523-75bd-daa5-47357b3c02e8"] }, "yValue": 0, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-7-n-26", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 1000, "target": {}, "yValue": 0, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-7-n-24", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "selector": ".hero__content-wrap", "selectorGuids": ["6b46cf29-e24b-d1fa-8966-78e591629fbd"] }, "value": 1, "unit": "" } }, { "id": "a-7-n-22", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "ease", "duration": 1000, "target": { "selector": ".cards__card.mod--2", "selectorGuids": ["3ed84636-3f6c-5565-6010-874604085d8c", "3ed84636-3f6c-5565-6010-874604085da8"] }, "zValue": 0, "xUnit": "DEG", "yUnit": "DEG", "zUnit": "deg" } }, { "id": "a-7-n-20", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "ease", "duration": 1000, "target": { "selector": ".cards__card.mod--1", "selectorGuids": ["3ed84636-3f6c-5565-6010-874604085d8c", "3ed84636-3f6c-5565-6010-874604085dab"] }, "zValue": 0, "xUnit": "DEG", "yUnit": "DEG", "zUnit": "deg" } }, { "id": "a-7-n-18", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 1000, "target": { "selector": ".cards__parallax", "selectorGuids": ["3ed84636-3f6c-5565-6010-874604085d86"] }, "yValue": 0, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-7-n-10", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 1000, "target": { "selector": ".heading.mod--hero", "selectorGuids": ["1575f616-5bd6-8828-3847-779b006344f8", "8a774eb5-a48d-acaa-00b3-9337742f6734"] }, "yValue": 0, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-7-n-4", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "selector": ".section.mod--header", "selectorGuids": ["d00eb5c6-b523-75bd-daa5-47357b3c02e3", "d00eb5c6-b523-75bd-daa5-47357b3c02e8"] }, "value": 1, "unit": "" } }, { "id": "a-7-n-7", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "id": "64721373cb63b9f6b8af5920|8db1b536-f9a7-f56e-ccf9-d1321667ccde" }, "value": 1, "unit": "" } }, { "id": "a-7-n-8", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 1000, "target": { "id": "64721373cb63b9f6b8af5920|8db1b536-f9a7-f56e-ccf9-d1321667ccde" }, "yValue": 0, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-7-n-14", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 1000, "target": {}, "yValue": 0, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-7-n-16", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 1000, "target": {}, "yValue": 0, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }] }], "useFirstGroupAsInitialState": true, "createdOn": 1662043851507 }, "a-21": { "id": "a-21", "title": "â˜ï¸ BRIX - Slide To Top - 0.4s", "actionItemGroups": [{ "actionItems": [{ "id": "a-21-n", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "yValue": 10, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-21-n-2", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "value": 0, "unit": "" } }] }, { "actionItems": [{ "id": "a-21-n-3", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 400, "easing": "ease", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "yValue": 0, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-21-n-4", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 400, "easing": "ease", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "value": 1, "unit": "" } }] }], "useFirstGroupAsInitialState": true, "createdOn": 1637117977426 }, "a-47": { "id": "a-47", "title": "Dropdown / OPEN ðŸŸ¢", "actionItemGroups": [{ "actionItems": [{ "id": "a-47-n", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "ease", "duration": 300, "target": {}, "zValue": 180, "xUnit": "DEG", "yUnit": "DEG", "zUnit": "deg" } }, { "id": "a-47-n-2", "actionTypeId": "STYLE_TEXT_COLOR", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "globalSwatchId": "2d1581e5", "rValue": 100, "bValue": 255, "gValue": 46, "aValue": 1 } }] }], "useFirstGroupAsInitialState": false, "createdOn": 1645840161064 }, "a-48": { "id": "a-48", "title": "Dropdown / CLOSE ðŸ”´", "actionItemGroups": [{ "actionItems": [{ "id": "a-48-n", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "ease", "duration": 300, "target": {}, "zValue": 0, "xUnit": "DEG", "yUnit": "DEG", "zUnit": "deg" } }, { "id": "a-48-n-2", "actionTypeId": "STYLE_TEXT_COLOR", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "globalSwatchId": "2268f126", "rValue": 107, "bValue": 148, "gValue": 112, "aValue": 1 } }] }], "useFirstGroupAsInitialState": false, "createdOn": 1645840161064 }, "a-20": { "id": "a-20", "title": "â˜ï¸ BRIX - Slide To Top - 0.2s", "actionItemGroups": [{ "actionItems": [{ "id": "a-20-n", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "yValue": 10, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-20-n-2", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "value": 0, "unit": "" } }] }, { "actionItems": [{ "id": "a-20-n-3", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 200, "easing": "ease", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "yValue": 0, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-20-n-4", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 200, "easing": "ease", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "value": 1, "unit": "" } }] }], "useFirstGroupAsInitialState": true, "createdOn": 1637117977426 } }, "site": { "mediaQueries": [{ "key": "main", "min": 992, "max": 10000 }, { "key": "medium", "min": 768, "max": 991 }, { "key": "small", "min": 480, "max": 767 }, { "key": "tiny", "min": 0, "max": 479 }] } }
+    { "events": { "e": { "id": "e", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OVER", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-19" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".btn", "originalId": "64721373cb63b9f6b8af5920|a4458752-4985-99eb-e29a-a17624f23469", "appliesTo": "CLASS" }, "targets": [{ "selector": ".btn", "originalId": "64721373cb63b9f6b8af5920|a4458752-4985-99eb-e29a-a17624f23469", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1660647650542 }, "e-2": { "id": "e-2", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OUT", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-2", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-18" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".btn", "originalId": "64721373cb63b9f6b8af5920|a4458752-4985-99eb-e29a-a17624f23469", "appliesTo": "CLASS" }, "targets": [{ "selector": ".btn", "originalId": "64721373cb63b9f6b8af5920|a4458752-4985-99eb-e29a-a17624f23469", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1660647650563 }, "e-3": { "id": "e-3", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_MOVE", "action": { "id": "", "actionTypeId": "GENERAL_CONTINUOUS_ACTION", "config": { "actionListId": "a-3", "affectedElements": {}, "duration": 0 } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "id": "64721373cb63b9f6b8af5920|af609c91-8cc0-50e8-447d-1b93b74024a9", "appliesTo": "ELEMENT", "styleBlockIds": [] }, "targets": [{ "id": "64721373cb63b9f6b8af5920|af609c91-8cc0-50e8-447d-1b93b74024a9", "appliesTo": "ELEMENT", "styleBlockIds": [] }], "config": [{ "continuousParameterGroupId": "a-3-p", "selectedAxis": "X_AXIS", "basedOn": "ELEMENT", "reverse": false, "smoothing": 90, "restingState": 50 }, { "continuousParameterGroupId": "a-3-p-2", "selectedAxis": "Y_AXIS", "basedOn": "ELEMENT", "reverse": false, "smoothing": 50, "restingState": 50 }], "createdOn": 1660654592739 }, "e-4": { "id": "e-4", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OVER", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-4", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-5" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".btnbig", "originalId": "64721373cb63b9f6b8af5920|e7296ad0-6e3c-185e-8d68-aa2ab8a0a62f", "appliesTo": "CLASS" }, "targets": [{ "selector": ".btnbig", "originalId": "64721373cb63b9f6b8af5920|e7296ad0-6e3c-185e-8d68-aa2ab8a0a62f", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1661776816153 }, "e-5": { "id": "e-5", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OUT", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-5", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-11" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".btnbig", "originalId": "64721373cb63b9f6b8af5920|e7296ad0-6e3c-185e-8d68-aa2ab8a0a62f", "appliesTo": "CLASS" }, "targets": [{ "selector": ".btnbig", "originalId": "64721373cb63b9f6b8af5920|e7296ad0-6e3c-185e-8d68-aa2ab8a0a62f", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1661776816154 }, "e-6": { "id": "e-6", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OVER", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-7" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".social-link", "originalId": "64721373cb63b9f6b8af5920|6a7024eb-4513-21eb-0386-ea7675742d2c", "appliesTo": "CLASS" }, "targets": [{ "selector": ".social-link", "originalId": "64721373cb63b9f6b8af5920|6a7024eb-4513-21eb-0386-ea7675742d2c", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1662025275323 }, "e-7": { "id": "e-7", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OUT", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-2", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-6" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".social-link", "originalId": "64721373cb63b9f6b8af5920|6a7024eb-4513-21eb-0386-ea7675742d2c", "appliesTo": "CLASS" }, "targets": [{ "selector": ".social-link", "originalId": "64721373cb63b9f6b8af5920|6a7024eb-4513-21eb-0386-ea7675742d2c", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1662025275323 }, "e-8": { "id": "e-8", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OVER", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-9" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".appstore__link", "originalId": "64721373cb63b9f6b8af5920|fd6ec85e-e6ad-e431-4e7d-3aa40af81cff", "appliesTo": "CLASS" }, "targets": [{ "selector": ".appstore__link", "originalId": "64721373cb63b9f6b8af5920|fd6ec85e-e6ad-e431-4e7d-3aa40af81cff", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1662025723594 }, "e-9": { "id": "e-9", "name": "", "animationType": "custom", "eventTypeId": "MOUSE_OUT", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-2", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-8" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".appstore__link", "originalId": "64721373cb63b9f6b8af5920|fd6ec85e-e6ad-e431-4e7d-3aa40af81cff", "appliesTo": "CLASS" }, "targets": [{ "selector": ".appstore__link", "originalId": "64721373cb63b9f6b8af5920|fd6ec85e-e6ad-e431-4e7d-3aa40af81cff", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1662025723594 }, "e-16": { "id": "e-16", "name": "", "animationType": "preset", "eventTypeId": "SCROLL_INTO_VIEW", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-21", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-17" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "id": "64721373cb63b9f6b8af5920|0e6746db-506f-7c94-0a02-12da4d3ea904", "appliesTo": "ELEMENT", "styleBlockIds": [] }, "targets": [{ "id": "64721373cb63b9f6b8af5920|0e6746db-506f-7c94-0a02-12da4d3ea904", "appliesTo": "ELEMENT", "styleBlockIds": [] }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": 0, "scrollOffsetUnit": "%", "delay": null, "direction": null, "effectIn": null }, "createdOn": 1637646551285 }, "e-18": { "id": "e-18", "name": "", "animationType": "custom", "eventTypeId": "DROPDOWN_OPEN", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-47", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-19" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".f-dropdown", "originalId": "63226e0878e70198b1448dd7|78bd4205-904e-c5f9-435b-95105151720d", "appliesTo": "CLASS" }, "targets": [{ "selector": ".f-dropdown", "originalId": "63226e0878e70198b1448dd7|78bd4205-904e-c5f9-435b-95105151720d", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1645840154469 }, "e-19": { "id": "e-19", "name": "", "animationType": "custom", "eventTypeId": "DROPDOWN_CLOSE", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-48", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-18" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "selector": ".f-dropdown", "originalId": "63226e0878e70198b1448dd7|78bd4205-904e-c5f9-435b-95105151720d", "appliesTo": "CLASS" }, "targets": [{ "selector": ".f-dropdown", "originalId": "63226e0878e70198b1448dd7|78bd4205-904e-c5f9-435b-95105151720d", "appliesTo": "CLASS" }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1645840154470 }, "e-20": { "id": "e-20", "name": "", "animationType": "preset", "eventTypeId": "SCROLL_INTO_VIEW", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-20", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-21" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "id": "64721373cb63b9f6b8af5924|db788ec6-09ce-ab1f-d0d9-4a9a186f58ce", "appliesTo": "ELEMENT", "styleBlockIds": [] }, "targets": [{ "id": "64721373cb63b9f6b8af5924|db788ec6-09ce-ab1f-d0d9-4a9a186f58ce", "appliesTo": "ELEMENT", "styleBlockIds": [] }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": 0, "scrollOffsetUnit": "%", "delay": null, "direction": null, "effectIn": null }, "createdOn": 1637208396272 }, "e-22": { "id": "e-22", "name": "", "animationType": "custom", "eventTypeId": "SCROLL_INTO_VIEW", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-21", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-23" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "id": "64721373cb63b9f6b8af5924|db788ec6-09ce-ab1f-d0d9-4a9a186f58d9", "appliesTo": "ELEMENT", "styleBlockIds": [] }, "targets": [{ "id": "64721373cb63b9f6b8af5924|db788ec6-09ce-ab1f-d0d9-4a9a186f58d9", "appliesTo": "ELEMENT", "styleBlockIds": [] }], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": 0, "scrollOffsetUnit": "%", "delay": null, "direction": null, "effectIn": null }, "createdOn": 1637209854447 }, "e-24": { "id": "e-24", "name": "", "animationType": "preset", "eventTypeId": "MOUSE_CLICK", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-57", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-25" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "id": "64721373cb63b9f6b8af5920|e95699cd-3152-a55e-225b-2abd0fda8f9c", "appliesTo": "ELEMENT", "styleBlockIds": [] }, "targets": [], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1685384902686 }, "e-25": { "id": "e-25", "name": "", "animationType": "preset", "eventTypeId": "MOUSE_SECOND_CLICK", "action": { "id": "", "actionTypeId": "GENERAL_START_ACTION", "config": { "delay": 0, "easing": "", "duration": 0, "actionListId": "a-58", "affectedElements": {}, "playInReverse": false, "autoStopEventId": "e-24" } }, "mediaQueries": ["main", "medium", "small", "tiny"], "target": { "id": "64721373cb63b9f6b8af5920|e95699cd-3152-a55e-225b-2abd0fda8f9c", "appliesTo": "ELEMENT", "styleBlockIds": [] }, "targets": [], "config": { "loop": false, "playInReverse": false, "scrollOffsetValue": null, "scrollOffsetUnit": null, "delay": null, "direction": null, "effectIn": null }, "createdOn": 1685384902686 } }, "actionLists": { "a": { "id": "a", "title": "btn-hover_over", "actionItemGroups": [{ "actionItems": [{ "id": "a-n-2", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "yValue": 0, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-n-4", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "yValue": 110, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-n-3", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "yValue": 110, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }] }, { "actionItems": [{ "id": "a-n-6", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 500, "target": {}, "yValue": 0, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-n-5", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 150, "easing": "ease", "duration": 500, "target": {}, "yValue": 0, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-n", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 150, "easing": "ease", "duration": 500, "target": {}, "yValue": -2, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }] }], "useFirstGroupAsInitialState": true, "createdOn": 1660647667275 }, "a-2": { "id": "a-2", "title": "btn-hover_out", "actionItemGroups": [{ "actionItems": [{ "id": "a-2-n-6", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 500, "target": {}, "yValue": 110, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-2-n-5", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 500, "target": {}, "yValue": 0, "xUnit": "PX", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-2-n-4", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 150, "easing": "ease", "duration": 500, "target": {}, "yValue": 110, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }] }], "useFirstGroupAsInitialState": false, "createdOn": 1660647667275 }, "a-3": { "id": "a-3", "title": "hero-cards", "continuousParameterGroups": [{ "id": "a-3-p", "type": "MOUSE_X", "parameterLabel": "Mouse X", "continuousActionGroups": [{ "keyframe": 0, "actionItems": [{ "id": "a-3-n", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": "CHILDREN", "selector": ".cards__card-content.mod--1", "selectorGuids": ["3ed84636-3f6c-5565-6010-874604085d97", "3ed84636-3f6c-5565-6010-874604085dac"] }, "xValue": -14, "yValue": null, "zValue": null, "xUnit": "deg", "yUnit": "deg", "zUnit": "deg" } }, { "id": "a-3-n-5", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": "CHILDREN", "selector": ".cards__card-content.mod--2", "selectorGuids": ["3ed84636-3f6c-5565-6010-874604085d97", "3ed84636-3f6c-5565-6010-874604085da5"] }, "xValue": 14, "yValue": null, "zValue": null, "xUnit": "deg", "yUnit": "deg", "zUnit": "deg" } }] }, { "keyframe": 49.9, "actionItems": [{ "id": "a-3-n-7", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": "CHILDREN", "selector": ".card__shine-wrap", "selectorGuids": ["05a9ca4e-9654-8e4b-7911-22939065ebc3"] }, "xValue": -100, "xUnit": "%", "yUnit": "PX", "zUnit": "PX" } }] }, { "keyframe": 50, "actionItems": [{ "id": "a-3-n-8", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": "CHILDREN", "selector": ".card__shine-wrap", "selectorGuids": ["05a9ca4e-9654-8e4b-7911-22939065ebc3"] }, "xValue": 100, "xUnit": "%", "yUnit": "PX", "zUnit": "PX" } }] }, { "keyframe": 100, "actionItems": [{ "id": "a-3-n-2", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": "CHILDREN", "selector": ".cards__card-content.mod--1", "selectorGuids": ["3ed84636-3f6c-5565-6010-874604085d97", "3ed84636-3f6c-5565-6010-874604085dac"] }, "xValue": 14, "yValue": null, "xUnit": "deg", "yUnit": "deg", "zUnit": "DEG" } }, { "id": "a-3-n-6", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": "CHILDREN", "selector": ".cards__card-content.mod--2", "selectorGuids": ["3ed84636-3f6c-5565-6010-874604085d97", "3ed84636-3f6c-5565-6010-874604085da5"] }, "xValue": -14, "yValue": null, "zValue": null, "xUnit": "deg", "yUnit": "deg", "zUnit": "deg" } }] }] }, { "id": "a-3-p-2", "type": "MOUSE_Y", "parameterLabel": "Mouse Y", "continuousActionGroups": [] }], "createdOn": 1660654603287 }, "a-4": { "id": "a-4", "title": "btnBig-hover_over", "actionItemGroups": [{ "actionItems": [{ "id": "a-4-n-3", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "value": 0, "unit": "" } }] }, { "actionItems": [{ "id": "a-4-n", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 500, "target": {}, "xValue": 1.5, "yValue": -1.5, "xUnit": "rem", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-4-n-2", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "value": 1, "unit": "" } }] }], "useFirstGroupAsInitialState": true, "createdOn": 1661776821746 }, "a-5": { "id": "a-5", "title": "btnBig-hover_out", "actionItemGroups": [{ "actionItems": [{ "id": "a-5-n", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "ease", "duration": 500, "target": {}, "xValue": 0, "yValue": 0, "xUnit": "rem", "yUnit": "rem", "zUnit": "PX" } }, { "id": "a-5-n-2", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "value": 0, "unit": "" } }] }], "useFirstGroupAsInitialState": false, "createdOn": 1661776821746 }, "a-21": { "id": "a-21", "title": "â˜ï¸ BRIX - Slide To Top - 0.4s", "actionItemGroups": [{ "actionItems": [{ "id": "a-21-n", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "yValue": 10, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-21-n-2", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "value": 0, "unit": "" } }] }, { "actionItems": [{ "id": "a-21-n-3", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 400, "easing": "ease", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "yValue": 0, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-21-n-4", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 400, "easing": "ease", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "value": 1, "unit": "" } }] }], "useFirstGroupAsInitialState": true, "createdOn": 1637117977426 }, "a-47": { "id": "a-47", "title": "Dropdown / OPEN ðŸŸ¢", "actionItemGroups": [{ "actionItems": [{ "id": "a-47-n", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "ease", "duration": 300, "target": {}, "zValue": 180, "xUnit": "DEG", "yUnit": "DEG", "zUnit": "deg" } }, { "id": "a-47-n-2", "actionTypeId": "STYLE_TEXT_COLOR", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "globalSwatchId": "2d1581e5", "rValue": 100, "bValue": 255, "gValue": 46, "aValue": 1 } }] }], "useFirstGroupAsInitialState": false, "createdOn": 1645840161064 }, "a-48": { "id": "a-48", "title": "Dropdown / CLOSE ðŸ”´", "actionItemGroups": [{ "actionItems": [{ "id": "a-48-n", "actionTypeId": "TRANSFORM_ROTATE", "config": { "delay": 0, "easing": "ease", "duration": 300, "target": {}, "zValue": 0, "xUnit": "DEG", "yUnit": "DEG", "zUnit": "deg" } }, { "id": "a-48-n-2", "actionTypeId": "STYLE_TEXT_COLOR", "config": { "delay": 0, "easing": "", "duration": 500, "target": {}, "globalSwatchId": "2268f126", "rValue": 107, "bValue": 148, "gValue": 112, "aValue": 1 } }] }], "useFirstGroupAsInitialState": false, "createdOn": 1645840161064 }, "a-20": { "id": "a-20", "title": "â˜ï¸ BRIX - Slide To Top - 0.2s", "actionItemGroups": [{ "actionItems": [{ "id": "a-20-n", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "yValue": 10, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-20-n-2", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 0, "easing": "", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "value": 0, "unit": "" } }] }, { "actionItems": [{ "id": "a-20-n-3", "actionTypeId": "TRANSFORM_MOVE", "config": { "delay": 200, "easing": "ease", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "yValue": 0, "xUnit": "PX", "yUnit": "%", "zUnit": "PX" } }, { "id": "a-20-n-4", "actionTypeId": "STYLE_OPACITY", "config": { "delay": 200, "easing": "ease", "duration": 500, "target": { "useEventTarget": true, "id": "2b842a8b-4216-fa87-f566-5c75c66b381a" }, "value": 1, "unit": "" } }] }], "useFirstGroupAsInitialState": true, "createdOn": 1637117977426 }, "a-57": { "id": "a-57", "title": "Menu BTN Open", "actionItemGroups": [{ "actionItems": [{ "id": "a-57-n", "actionTypeId": "STYLE_BORDER", "config": { "delay": 0, "easing": "", "duration": 0, "target": {}, "globalSwatchId": "ba57714a", "rValue": 128, "bValue": 145, "gValue": 129, "aValue": 1 } }, { "id": "a-57-n-2", "actionTypeId": "STYLE_TEXT_COLOR", "config": { "delay": 0, "easing": "", "duration": 0, "target": {}, "globalSwatchId": "ba57714a", "rValue": 128, "bValue": 145, "gValue": 129, "aValue": 1 } }] }], "useFirstGroupAsInitialState": false, "createdOn": 1614699055774 }, "a-58": { "id": "a-58", "title": "Menu Btn Close", "actionItemGroups": [{ "actionItems": [{ "id": "a-58-n", "actionTypeId": "STYLE_BORDER", "config": { "delay": 0, "easing": "", "duration": 0, "target": {}, "globalSwatchId": "", "rValue": 255, "bValue": 255, "gValue": 255, "aValue": 1 } }, { "id": "a-58-n-2", "actionTypeId": "STYLE_TEXT_COLOR", "config": { "delay": 0, "easing": "", "duration": 0, "target": {}, "globalSwatchId": "", "rValue": 255, "bValue": 255, "gValue": 255, "aValue": 1 } }] }], "useFirstGroupAsInitialState": false, "createdOn": 1614699055774 } }, "site": { "mediaQueries": [{ "key": "main", "min": 992, "max": 10000 }, { "key": "medium", "min": 768, "max": 991 }, { "key": "small", "min": 480, "max": 767 }, { "key": "tiny", "min": 0, "max": 479 }] } }
 );
